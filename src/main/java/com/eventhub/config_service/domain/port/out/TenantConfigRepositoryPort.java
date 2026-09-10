@@ -1,4 +1,10 @@
-package com.eventhub.config_service.domain.port.out.TenantConfigRepositoryPort;
+package com.eventhub.config_service.domain.port.out;
 
-public class TenantConfigRepositoryPort {
+import com.eventhub.config_service.domain.model.TenantConfig;
+
+import java.util.Optional;
+
+public interface TenantConfigRepositoryPort {
+    TenantConfig save(TenantConfig tenantConfig);
+    Optional<TenantConfig> findByTenantId(String tenantId);
 }
