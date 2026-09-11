@@ -14,9 +14,14 @@ public class TenantConfigMongoAdapter implements TenantConfigRepositoryPort {
     private final SpringDataMongoRepository mongoRepository;
 
     @Override
-    public TenantConfig save(TenantConfig tenantConfig) {
-        TenantConfigDocument document = toDocument(tenantConfig);
-        TenantConfigDocument saved = mongoRepository.save(document);
+    public TenantConfig save(TenantConfig config) {
+        TenantConfigDocument doc = toDocument(config);
+
+        // Buscar si ya existe usando mongoRepository
+        mongoRepository.findByTenantId(config.getTenantId())
+                .ifPresent(existing -> doc.setId(existing.getId()));
+
+        TenantConfigDocument saved = mongoRepository.save(doc);
         return toDomain(saved);
     }
 

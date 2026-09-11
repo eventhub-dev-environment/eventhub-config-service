@@ -7,8 +7,23 @@ spring:
   profiles:
     active: dev
 
+gateway:
+  internal-secret: ${GATEWAY_INTERNAL_SECRET}
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: "b3,w3c"
+    export:
+      zipkin:
+        endpoint: ${MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
