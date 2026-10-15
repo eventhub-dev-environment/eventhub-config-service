@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Objects;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @Component
 public class GatewayAccessFilter extends OncePerRequestFilter {
@@ -18,27 +19,34 @@ public class GatewayAccessFilter extends OncePerRequestFilter {
     @Value("${gateway.internal-secret}")
     private String expectedSecret;
 
+    // Rutas que no pasan por el gateway: Swagger local y las probes de Kubernetes
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/actuator/health")
+                || path.contains("/swagger-ui")
+                || path.contains("/v3/api-docs");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-
-        // Permitir Swagger UI local directo en el microservicio para desarrollo
-        if (path.contains("/swagger-ui") || path.contains("/v3/api-docs")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String secretHeader = request.getHeader("X-Gateway-Secret");
 
-        // Validacion segura contra NullPointerException
-        if (expectedSecret == null || !Objects.equals(secretHeader, expectedSecret)) {
+        if (expectedSecret == null || secretHeader == null || !secretsMatch(secretHeader, expectedSecret)) {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.getWriter().write("Acceso denegado: Las peticiones deben pasar obligatoriamente por el API Gateway");
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Comparación en tiempo constante, para no filtrar el secreto por tiempos de respuesta
+    private boolean secretsMatch(String provided, String expected) {
+        return MessageDigest.isEqual(
+                provided.getBytes(StandardCharsets.UTF_8),
+                expected.getBytes(StandardCharsets.UTF_8));
     }
 }
