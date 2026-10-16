@@ -19,13 +19,16 @@ public class GatewayAccessFilter extends OncePerRequestFilter {
     @Value("${gateway.internal-secret}")
     private String expectedSecret;
 
-    // Rutas que no pasan por el gateway: Swagger local y las probes de Kubernetes
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/actuator/health")
-                || path.contains("/swagger-ui")
-                || path.contains("/v3/api-docs");
+        return path.equals("/actuator/health")
+                || path.startsWith("/actuator/health/")
+                || path.equals("/actuator/prometheus")
+                || path.equals("/swagger-ui.html")
+                || path.startsWith("/swagger-ui/")
+                || path.equals("/v3/api-docs")
+                || path.startsWith("/v3/api-docs/");
     }
 
     @Override
@@ -43,7 +46,6 @@ public class GatewayAccessFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Comparación en tiempo constante, para no filtrar el secreto por tiempos de respuesta
     private boolean secretsMatch(String provided, String expected) {
         return MessageDigest.isEqual(
                 provided.getBytes(StandardCharsets.UTF_8),
